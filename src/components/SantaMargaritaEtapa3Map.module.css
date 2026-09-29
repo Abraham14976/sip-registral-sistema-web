@@ -1,0 +1,59 @@
+.mapShell {
+  position: relative;
+  min-height: 460px;
+  overflow: hidden;
+  border: 1px solid #c4d8e1;
+  background: #dfe8eb;
+}
+
+.map {
+  width: 100%;
+  height: min(72vh, 760px);
+  min-height: 460px;
+}
+
+.mapBadge {
+  position: absolute;
+  z-index: 500;
+  top: 16px;
+  left: 16px;
+  max-width: calc(100% - 32px);
+  padding: 9px 12px;
+  border-left: 3px solid #d29b28;
+  color: #21394b;
+  background: #fff;
+  box-shadow: 0 3px 12px #001a2b24;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.popup {
+  display: grid;
+  gap: 5px;
+  min-width: 175px;
+  color: #173047;
+  font-size: 12px;
+}
+
+.popup strong {
+  color: #08243d;
+  font-size: 14px;
+}
+
+@media (max-width: 600px) {
+  .mapShell,
+  .map {
+    min-height: 390px;
+  }
+
+  .map {
+    height: 58vh;
+  }
+
+  .mapBadge {
+    top: 10px;
+    left: 10px;
+    max-width: calc(100% - 20px);
+    font-size: 11px;
+  }
+}
