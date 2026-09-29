@@ -43,7 +43,14 @@ export async function getSantaMargaritaEtapa3FromPostGIS(): Promise<{
     });
 
     return { lots };
-  } catch {
-    return { lots: [], error: "No se pudo cargar Santa Margarita Etapa 3 desde PostgreSQL/PostGIS. Revisa la configuración local de la base de datos." };
+  } catch (error) {
+    console.error("Error PostGIS Etapa 3:", {
+      code: (error as { code?: string }).code,
+      message: error instanceof Error ? error.message : "Error desconocido",
+    });
+    return {
+      lots: [],
+      error: "No se pudo cargar Santa Margarita Etapa 3 desde PostgreSQL/PostGIS.",
+    };
   }
 }
