@@ -1,80 +1,44 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { MapContainer, Polygon, Popup, TileLayer, useMap } from "react-leaflet";
-import type { LatLngExpression } from "leaflet";
+import { MapContainer, Polygon, Popup, TileLayer, Tooltip, useMap, useMapEvents } from "react-leaflet";
 import type { MapLot } from "@/lib/lots";
 import "leaflet/dist/leaflet.css";
 
 interface SIPMapProps {
-  initialLots?: MapLot[];
-  initialSource?: "postgis" | "fallback";
+  initialLots: MapLot[];
   selectedLotCode?: string;
-  filterInmobiliaria?: string;
-  filterProyecto?: string;
   filterEstado?: string;
 }
 
-function MapController({
-  activeLot,
-  activeBounds,
-}: {
-  activeLot?: MapLot;
-  activeBounds?: [[number, number], [number, number]];
-}) {
+function MapController({ activeBounds }: { activeBounds: [[number, number], [number, number]] }) {
   const map = useMap();
 
   useEffect(() => {
-    if (activeBounds) {
-      map.fitBounds(activeBounds, { padding: [50, 50], maxZoom: 19 });
-    }
+    map.fitBounds(activeBounds, { padding: [40, 40], maxZoom: 17 });
   }, [map, activeBounds]);
 
   return null;
 }
 
+function MapZoomListener({ onZoomChange }: { onZoomChange: (zoom: number) => void }) {
+  const map = useMapEvents({
+    zoomend: (event) => onZoomChange(event.target.getZoom()),
+  });
+
+  useEffect(() => onZoomChange(map.getZoom()), [map, onZoomChange]);
+
+  return null;
+}
+
 export default function SIPMap({
-  initialLots = [],
-  initialSource = "postgis",
+  initialLots,
   selectedLotCode,
-  filterInmobiliaria,
-  filterProyecto,
   filterEstado,
 }: SIPMapProps) {
-  const [lots, setLots] = useState<MapLot[]>(initialLots);
+  const lots = initialLots;
   const [selectedCode, setSelectedCode] = useState<string | undefined>(selectedLotCode);
-  const [source, setSource] = useState<"postgis" | "fallback">(initialSource);
-
-  // Consultar lotes en vivo desde la API de PostGIS
-  useEffect(() => {
-    let isMounted = true;
-    async function fetchLots() {
-      try {
-        const params = new URLSearchParams();
-        if (filterInmobiliaria && filterInmobiliaria !== "todas") {
-          params.set("inmobiliaria", filterInmobiliaria);
-        }
-        if (filterProyecto && filterProyecto !== "todos") {
-          params.set("proyecto", filterProyecto);
-        }
-        const res = await fetch(`/api/lotes?${params.toString()}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (isMounted && data.lots) {
-            setLots(data.lots);
-            setSource(data.source);
-          }
-        }
-      } catch (err) {
-        console.error("Error al consultar API de lotes:", err);
-      }
-    }
-
-    fetchLots();
-    return () => {
-      isMounted = false;
-    };
-  }, [filterInmobiliaria, filterProyecto]);
+  const [zoom, setZoom] = useState(17);
 
   // Filtrado reactivo en cliente (por estado u opciones)
   const filteredLots = useMemo(() => {
@@ -86,66 +50,62 @@ export default function SIPMap({
     });
   }, [lots, filterEstado]);
 
-  // Determinar bounds: si hay lote de Polloc, enfocar en Cajamarca
   const activeBounds = useMemo<[[number, number], [number, number]] | undefined>(() => {
-    const polloc = filteredLots.find((l) => l.proyectoSlug === "polloc" || l.code.startsWith("POLLOC"));
-    if (polloc && polloc.polygon.length > 0) {
-      const lats = polloc.polygon.map((p) => p[0]);
-      const lngs = polloc.polygon.map((p) => p[1]);
-      const minLat = Math.min(...lats);
-      const maxLat = Math.max(...lats);
-      const minLng = Math.min(...lngs);
-      const maxLng = Math.max(...lngs);
-      return [
-        [minLat - 0.0003, minLng - 0.0003],
-        [maxLat + 0.0003, maxLng + 0.0003],
-      ];
-    }
+    const latitudes = lots.flatMap((lot) => lot.polygon.map(([latitude]) => latitude));
+    const longitudes = lots.flatMap((lot) => lot.polygon.map(([, longitude]) => longitude));
+    if (latitudes.length === 0 || longitudes.length === 0) return undefined;
 
-    if (filteredLots.length > 0) {
-      const allLats = filteredLots.flatMap((l) => l.polygon.map((p) => p[0]));
-      const allLngs = filteredLots.flatMap((l) => l.polygon.map((p) => p[1]));
-      return [
-        [Math.min(...allLats) - 0.01, Math.min(...allLngs) - 0.01],
-        [Math.max(...allLats) + 0.01, Math.max(...allLngs) + 0.01],
-      ];
-    }
-
-    return [[-7.13, -78.32], [-7.11, -78.30]];
-  }, [filteredLots]);
+    return [
+      [Math.min(...latitudes), Math.min(...longitudes)],
+      [Math.max(...latitudes), Math.max(...longitudes)],
+    ];
+  }, [lots]);
 
   const selectedLot = filteredLots.find((l) => l.code === selectedCode);
+  const center: [number, number] = activeBounds
+    ? [(activeBounds[0][0] + activeBounds[1][0]) / 2, (activeBounds[0][1] + activeBounds[1][1]) / 2]
+    : [0, 0];
+
+  useEffect(() => {
+    if (!filteredLots.some((lot) => lot.code === selectedCode)) {
+      setSelectedCode(filteredLots[0]?.code);
+    }
+  }, [filteredLots, selectedCode]);
 
   return (
     <div className="map-shell" aria-label="Mapa territorial de lotes">
       <MapContainer
-        center={[-7.1237, -78.3123]}
-        zoom={18}
+        center={center}
+        zoom={17}
+        maxZoom={20}
         scrollWheelZoom
         className="sip-map"
       >
         <TileLayer
           attribution="&copy; Esri, Maxar, Earthstar Geographics"
           url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+          maxNativeZoom={17}
           maxZoom={20}
         />
-        <MapController activeBounds={activeBounds} activeLot={selectedLot} />
+        {activeBounds && <MapController activeBounds={activeBounds} />}
+        <MapZoomListener onZoomChange={setZoom} />
 
         {filteredLots.map((lot) => {
           const isSelected = lot.code === selectedCode;
+          const showLabel = isSelected || zoom >= 19;
           const isAvailable = lot.status === "available";
-          const baseColor = isAvailable ? "#44d483" : "#f45d68";
-          const fillColor = isSelected ? "#ffd15c" : baseColor;
+          const baseColor = isAvailable ? "#39c98b" : lot.status === "registered" ? "#ec705f" : "#87939b";
+          const fillColor = isSelected ? "#d4ad58" : baseColor;
 
           return (
             <Polygon
               key={lot.code}
               positions={lot.polygon}
               pathOptions={{
-                color: isSelected ? "#ffffff" : baseColor,
+                color: isSelected ? "#fff4d7" : "#ffffff",
                 fillColor: fillColor,
-                fillOpacity: isSelected ? 0.85 : 0.65,
-                weight: isSelected ? 3 : 2,
+                fillOpacity: isSelected ? 0.5 : 0.36,
+                weight: isSelected ? 4 : 2.5,
               }}
               eventHandlers={{
                 click: () => {
@@ -153,6 +113,17 @@ export default function SIPMap({
                 },
               }}
             >
+              {showLabel && (
+                <Tooltip
+                  permanent
+                  direction="center"
+                  interactive
+                  className={`lot-code-tooltip${isSelected ? " lot-code-tooltip-selected" : ""}`}
+                  eventHandlers={{ click: () => setSelectedCode(lot.code) }}
+                >
+                  {lot.code}
+                </Tooltip>
+              )}
               <Popup>
                 <div style={{ minWidth: 190, padding: "4px 2px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
@@ -163,8 +134,8 @@ export default function SIPMap({
                         fontWeight: 700,
                         padding: "2px 6px",
                         borderRadius: 3,
-                        background: isAvailable ? "#e5f8ee" : "#fdeeed",
-                        color: isAvailable ? "#188046" : "#c5221f",
+                        background: isAvailable ? "#e5f8ee" : lot.status === "registered" ? "#fdeeed" : "#f1f2ef",
+                        color: isAvailable ? "#188046" : lot.status === "registered" ? "#c5221f" : "#68727a",
                       }}
                     >
                       {lot.statusLabel}
@@ -187,21 +158,27 @@ export default function SIPMap({
         })}
       </MapContainer>
 
+      <div className="map-code-select">
+        <label htmlFor="map-lot-code">Seleccionar lote</label>
+        <select
+          id="map-lot-code"
+          value={selectedCode ?? ""}
+          onChange={(event) => setSelectedCode(event.target.value)}
+        >
+          {filteredLots.map((lot) => <option key={lot.code} value={lot.code}>{lot.code}</option>)}
+        </select>
+      </div>
+
       <div className="map-badge">
-        <span
-          className="live-dot"
-          style={{ background: source === "postgis" ? "#44d483" : "#e5a832" }}
-        />
-        {source === "postgis"
-          ? "Fuente en vivo: PostgreSQL + PostGIS"
-          : "Modo DEMO de respaldo"}
+        <span className="live-dot" />
+        PostgreSQL + PostGIS · 34 lotes
       </div>
 
       {selectedLot && (
         <div
           style={{
             position: "absolute",
-            top: 15,
+            top: 79,
             right: 15,
             zIndex: 1000,
             background: "#fff",
@@ -220,7 +197,7 @@ export default function SIPMap({
           </div>
           <div style={{ fontSize: 12, color: "#475569", lineHeight: 1.5 }}>
             <div>Proyecto: <strong>{selectedLot.proyecto}</strong></div>
-            <div>Estado: <strong style={{ color: selectedLot.status === "available" ? "#219d5e" : "#d44754" }}>{selectedLot.statusLabel}</strong></div>
+            <div>Estado: <strong style={{ color: selectedLot.status === "available" ? "#219d5e" : selectedLot.status === "registered" ? "#d44754" : "#786741" }}>{selectedLot.statusLabel}</strong></div>
             <div>Área: <strong>{selectedLot.area} m²</strong></div>
           </div>
         </div>

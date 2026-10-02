@@ -1,20 +1,22 @@
 .projectGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
-  margin-top: 26px;
+  gap: 14px;
+  margin-top: 12px;
 }
 
 .projectCard {
   min-width: 0;
-  min-height: 170px;
-  padding: 22px;
-  border: 1px solid #dce6ed;
+  min-height: 174px;
+  padding: 21px;
+  border: 1px solid #dce1e2;
+  border-radius: 3px;
   background: #fff;
+  box-shadow: 0 4px 14px #142a3d08;
 }
 
 .santaMargarita {
-  border-top: 3px solid #0c63a8;
+  border-top: 2px solid #a98143;
 }
 
 .projectTitleRow {
@@ -30,15 +32,15 @@
 
 .projectCard h3 {
   margin: 16px 0 8px;
-  color: #08243d;
-  font-family: Manrope, sans-serif;
-  font-size: 22px;
+  color: #142a3d;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 25px;
   line-height: 1.25;
 }
 
 .projectNote {
   margin: 0;
-  color: #6d7e8d;
+  color: #697783;
   font-size: 13px;
   line-height: 1.5;
 }
@@ -47,17 +49,17 @@
 .pendingStatus {
   flex: 0 0 auto;
   padding: 5px 8px;
-  border: 1px solid #d8e9f3;
-  color: #07549a;
-  background: #f2f8fb;
+  border: 1px solid #e5ddcf;
+  color: #7c653e;
+  background: #f8f5ef;
   font-size: 10px;
   font-weight: 700;
 }
 
 .pendingStatus {
-  border-color: #e4e7e9;
-  color: #6d7e8d;
-  background: #f7f9fa;
+  border-color: #e2e5e4;
+  color: #75818a;
+  background: #f7f8f7;
 }
 
 .stageLink {
@@ -67,8 +69,8 @@
   gap: 16px;
   margin-top: 18px;
   padding-top: 14px;
-  border-top: 1px solid #e8eef2;
-  color: #07549a;
+  border-top: 1px solid #e8eae8;
+  color: #735a33;
 }
 
 .stageLink > span:first-child {

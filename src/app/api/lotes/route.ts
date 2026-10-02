@@ -3,15 +3,8 @@ import { getLotsFromPostGIS } from '@/lib/lots';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const inmobiliaria = searchParams.get('inmobiliaria') || undefined;
-  const proyecto = searchParams.get('proyecto') || undefined;
+export async function GET() {
+  const result = await getLotsFromPostGIS();
 
-  const result = await getLotsFromPostGIS({
-    inmobiliariaSlug: inmobiliaria,
-    proyectoSlug: proyecto,
-  });
-
-  return NextResponse.json(result);
+  return NextResponse.json(result, { status: result.error ? 503 : 200 });
 }

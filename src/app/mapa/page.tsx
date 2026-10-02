@@ -8,13 +8,10 @@ export const dynamic = "force-dynamic";
 export default async function MapPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ inmobiliaria?: string; proyecto?: string; lote?: string }>;
+  searchParams?: Promise<{ lote?: string }>;
 }) {
   const params = (await searchParams) || {};
-  const { lots, source } = await getLotsFromPostGIS({
-    inmobiliariaSlug: params.inmobiliaria,
-    proyectoSlug: params.proyecto,
-  });
+  const { lots, error } = await getLotsFromPostGIS();
 
   return (
     <main>
@@ -23,15 +20,13 @@ export default async function MapPage({
         <p className="eyebrow">Explorador territorial</p>
         <h1>Mapa público de lotes y proyectos</h1>
         <p>
-          Consulta los lotes georreferenciados en tiempo real. Selecciona un polígono para verificar su código oficial y estado registral.
+          Consulta los 34 lotes georreferenciados de Aquino, Santa Margarita, Etapa 3. Selecciona un polígono para ver su código y estado registral.
         </p>
       </section>
       <MapFilterLayout
         initialLots={lots}
-        initialSource={source}
-        defaultInmobiliaria={params.inmobiliaria || "aquino"}
-        defaultProyecto={params.proyecto || "polloc"}
-        defaultLote={params.lote || "POLLOC-01"}
+        error={error}
+        defaultLote={params.lote || "134A"}
       />
       <SiteFooter />
     </main>

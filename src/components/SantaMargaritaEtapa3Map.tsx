@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
-import { MapContainer, Polygon, Popup, TileLayer, useMap } from "react-leaflet";
+import { MapContainer, Polygon, Popup, TileLayer, Tooltip, useMap } from "react-leaflet";
 import type { SantaMargaritaEtapa3Lot } from "@/lib/santa-margarita-etapa3";
 import styles from "./SantaMargaritaEtapa3Map.module.css";
 import "leaflet/dist/leaflet.css";
@@ -47,8 +47,11 @@ export default function SantaMargaritaEtapa3Map({ lots }: { lots: SantaMargarita
           <Polygon
             key={lot.code}
             positions={lot.polygon}
-            pathOptions={{ color: "#ffe16a", fillColor: "#e5b934", fillOpacity: 0.35, weight: 8 }}
+            pathOptions={{ color: "#fff7df", fillColor: "#c49a4a", fillOpacity: 0.3, weight: 3 }}
           >
+            <Tooltip permanent direction="center" className="lot-code-tooltip">
+              {lot.code}
+            </Tooltip>
             <Popup>
               <div className={styles.popup}>
                 <strong>{lot.code}</strong>

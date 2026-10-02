@@ -6,11 +6,8 @@ import type { MapLot } from "@/lib/lots";
 const SIPMap = dynamic(() => import("./SIPMap"), { ssr: false });
 
 interface SIPMapLoaderProps {
-  initialLots?: MapLot[];
-  initialSource?: "postgis" | "fallback";
+  initialLots: MapLot[];
   selectedLotCode?: string;
-  filterInmobiliaria?: string;
-  filterProyecto?: string;
   filterEstado?: string;
 }
 

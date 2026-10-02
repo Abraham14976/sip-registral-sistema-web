@@ -2,8 +2,10 @@
   position: relative;
   min-height: 460px;
   overflow: hidden;
-  border: 1px solid #c4d8e1;
-  background: #dfe8eb;
+  border: 1px solid #c8d0d0;
+  border-radius: 3px;
+  background: #e4e8e7;
+  box-shadow: 0 10px 24px #142a3d12;
 }
 
 .map {
@@ -19,11 +21,13 @@
   left: 16px;
   max-width: calc(100% - 32px);
   padding: 9px 12px;
-  border-left: 3px solid #d29b28;
-  color: #21394b;
+  border: 1px solid #e1e3df;
+  border-left: 2px solid #a98143;
+  border-radius: 2px;
+  color: #344958;
   background: #fff;
   box-shadow: 0 3px 12px #001a2b24;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 800;
 }
 

@@ -6,58 +6,37 @@ import type { MapLot } from "@/lib/lots";
 
 interface MapFilterLayoutProps {
   initialLots: MapLot[];
-  initialSource: "postgis" | "fallback";
-  defaultInmobiliaria?: string;
-  defaultProyecto?: string;
+  error?: string;
   defaultLote?: string;
 }
 
 export default function MapFilterLayout({
   initialLots,
-  initialSource,
-  defaultInmobiliaria = "aquino",
-  defaultProyecto = "polloc",
-  defaultLote = "POLLOC-01",
+  error,
+  defaultLote = "134A",
 }: MapFilterLayoutProps) {
-  const [inmobiliaria, setInmobiliaria] = useState(defaultInmobiliaria);
-  const [proyecto, setProyecto] = useState(defaultProyecto);
   const [estado, setEstado] = useState("todos");
+
+  if (error) {
+    return (
+      <section className="map-page-layout">
+        <div className="map-load-error" role="alert">
+          <strong>Mapa no disponible</strong>
+          <span>{error}</span>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="map-page-layout">
       <aside className="filter-panel">
         <h3>Filtros territoriales</h3>
-
-        <label>
-          Inmobiliaria
-          <select
-            value={inmobiliaria}
-            onChange={(e) => {
-              setInmobiliaria(e.target.value);
-              if (e.target.value === "aquino") {
-                setProyecto("polloc");
-              } else if (e.target.value === "todas") {
-                setProyecto("todos");
-              }
-            }}
-          >
-            <option value="todas">Todas las inmobiliarias</option>
-            <option value="aquino">Inmobiliaria Aquino (Verificada)</option>
-            <option value="demo">Inmobiliarias DEMO</option>
-          </select>
-        </label>
-
-        <label>
-          Proyecto
-          <select
-            value={proyecto}
-            onChange={(e) => setProyecto(e.target.value)}
-          >
-            <option value="todos">Todos los proyectos</option>
-            <option value="polloc">Polloc (Inmobiliaria Aquino)</option>
-            <option value="los-sauces">Proyecto DEMO Los Sauces</option>
-          </select>
-        </label>
+        <div className="map-territory">
+          <span>Inmobiliaria</span><strong>Aquino</strong>
+          <span>Proyecto</span><strong>Santa Margarita</strong>
+          <span>Etapa</span><strong>Etapa 3</strong>
+        </div>
 
         <label>
           Estado del lote
@@ -68,6 +47,7 @@ export default function MapFilterLayout({
             <option value="todos">Todos los estados</option>
             <option value="available">Disponible</option>
             <option value="registered">Registrado en SIP</option>
+            <option value="pending">Estado pendiente</option>
           </select>
         </label>
 
@@ -77,6 +57,9 @@ export default function MapFilterLayout({
           </div>
           <div>
             <span className="legend-swatch registered" /> Registrado en SIP
+          </div>
+          <div>
+            <span className="legend-swatch pending" /> Estado pendiente
           </div>
         </div>
 
@@ -90,10 +73,7 @@ export default function MapFilterLayout({
       <div>
         <SIPMapLoader
           initialLots={initialLots}
-          initialSource={initialSource}
           selectedLotCode={defaultLote}
-          filterInmobiliaria={inmobiliaria}
-          filterProyecto={proyecto}
           filterEstado={estado}
         />
       </div>

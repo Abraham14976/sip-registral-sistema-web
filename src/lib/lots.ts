@@ -8,7 +8,7 @@ export interface MapLot {
   proyecto: string;
   proyectoSlug: string;
   area: number;
-  status: 'available' | 'registered';
+  status: 'available' | 'registered' | 'pending';
   statusLabel: string;
   isReal: boolean;
   polygon: [number, number][]; // [lat, lng] para Leaflet
@@ -77,10 +77,7 @@ export const fallbackDemoLots: MapLot[] = [
  * Consulta los lotes en vivo desde PostGIS.
  * La base de datos es la fuente de verdad del estado y la geometría.
  */
-export async function getLotsFromPostGIS(options?: {
-  inmobiliariaSlug?: string;
-  proyectoSlug?: string;
-}): Promise<{ source: 'postgis' | 'fallback'; lots: MapLot[]; error?: string }> {
+export async function getLotsFromPostGIS(): Promise<{ source: 'postgis'; lots: MapLot[]; error?: string }> {
   try {
     const res = await pool.query(
       `
@@ -97,57 +94,62 @@ export async function getLotsFromPostGIS(options?: {
       FROM lotes l
       JOIN proyectos p ON l.proyecto_id = p.id
       JOIN inmobiliarias i ON p.inmobiliaria_id = i.id
-      WHERE ($1::text IS NULL OR i.slug = $1)
-        AND ($2::text IS NULL OR p.slug = $2)
+      WHERE i.slug = 'aquino'
+        AND p.slug = 'santa-margarita'
       ORDER BY l.codigo ASC;
-      `,
-      [options?.inmobiliariaSlug || null, options?.proyectoSlug || null]
+      `
     );
 
-    const lots: MapLot[] = [];
-    for (const row of res.rows) {
-      if (!row.geojson) continue;
-      const geom = JSON.parse(row.geojson);
-      if (geom.type === 'Polygon' && Array.isArray(geom.coordinates)) {
-        const ring = geom.coordinates[0];
-        const latLngs: [number, number][] = ring.map(([lng, lat]: [number, number]) => [lat, lng]);
-        const statusVal = row.estado === 'registrado' ? 'registered' : 'available';
-        lots.push({
-          id: row.id,
-          code: row.codigo,
-          inmobiliaria: row.inmobiliaria,
-          inmobiliariaSlug: row.inmobiliaria_slug,
-          proyecto: row.proyecto,
-          proyectoSlug: row.proyecto_slug,
-          area: parseFloat(row.area_m2) || 0,
-          status: statusVal,
-          statusLabel: statusVal === 'available' ? 'Disponible' : 'Registrado en SIP',
-          isReal: true,
-          polygon: latLngs,
-        });
+    if (res.rows.length !== 34) {
+      return {
+        source: 'postgis',
+        lots: [],
+        error: `Se esperaban 34 lotes de Santa Margarita Etapa 3 y se encontraron ${res.rows.length}.`,
+      };
+    }
+
+    const lots: MapLot[] = res.rows.map((row) => {
+      const geometry = JSON.parse(row.geojson);
+      if (geometry.type !== 'Polygon' || !Array.isArray(geometry.coordinates?.[0]) || geometry.coordinates[0].length < 4) {
+        throw new Error(`Geometría inválida para el lote ${row.codigo}.`);
       }
-    }
 
-    if (lots.length > 0) {
-      return { source: 'postgis', lots };
-    }
+      const normalizedState = typeof row.estado === 'string' ? row.estado.trim().toLocaleLowerCase('es') : null;
+      const status = normalizedState === 'disponible'
+        ? 'available'
+        : normalizedState === 'registrado'
+          ? 'registered'
+          : 'pending';
+      const statusLabel = normalizedState === null
+        ? 'Estado pendiente'
+        : status === 'available'
+          ? 'Disponible'
+          : status === 'registered'
+            ? 'Registrado en SIP'
+            : row.estado;
 
-    let filtered = fallbackDemoLots;
-    if (options?.inmobiliariaSlug && options.inmobiliariaSlug !== 'todas') {
-      filtered = filtered.filter((l) => l.inmobiliariaSlug === options.inmobiliariaSlug);
-    }
-    if (options?.proyectoSlug && options.proyectoSlug !== 'todos') {
-      filtered = filtered.filter((l) => l.proyectoSlug === options.proyectoSlug);
-    }
-    return { source: 'fallback', lots: filtered };
-  } catch (err: any) {
-    let filtered = fallbackDemoLots;
-    if (options?.inmobiliariaSlug && options.inmobiliariaSlug !== 'todas') {
-      filtered = filtered.filter((l) => l.inmobiliariaSlug === options.inmobiliariaSlug);
-    }
-    if (options?.proyectoSlug && options.proyectoSlug !== 'todos') {
-      filtered = filtered.filter((l) => l.proyectoSlug === options.proyectoSlug);
-    }
-    return { source: 'fallback', lots: filtered, error: err.message };
+      return {
+        id: row.id,
+        code: row.codigo,
+        inmobiliaria: row.inmobiliaria,
+        inmobiliariaSlug: row.inmobiliaria_slug,
+        proyecto: row.proyecto,
+        proyectoSlug: row.proyecto_slug,
+        area: row.area_m2 === null ? 0 : Number(row.area_m2),
+        status,
+        statusLabel,
+        isReal: true,
+        polygon: geometry.coordinates[0].map(([longitude, latitude]: [number, number]) => [latitude, longitude]),
+      };
+    });
+
+    return { source: 'postgis', lots };
+  } catch (error) {
+    console.error('Error al consultar lotes de Santa Margarita Etapa 3:', error);
+    return {
+      source: 'postgis',
+      lots: [],
+      error: 'No se pudieron cargar los 34 polígonos desde PostgreSQL/PostGIS.',
+    };
   }
 }
